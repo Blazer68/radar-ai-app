@@ -1,7 +1,5 @@
 flightradarapi
 pandas
 pydeck
-flightradarapi
 google-generativeai
 beautifulsoup4
-
