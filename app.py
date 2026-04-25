@@ -1,49 +1,97 @@
 import streamlit as st
 from FlightRadar24 import FlightRadar24API
 import pandas as pd
+import pydeck as pdk
 
-# إعدادات الصفحة
-st.set_page_config(page_title="رادار  الذكي", page_icon="🔔", layout="wide")
-st.title("🔔 رادار الذكاء - نظام التنبيه المبكر")
+# 1. إعدادات واجهة التطبيق الاحترافية
+st.set_page_config(page_title="رادار  الذكي", page_icon="📍", layout="wide")
+st.title("📍 رادار - نظام التتبع والتنبيه الاحترافي")
 
-# الموقع المرجعي (وسط مدينة بسكرة)
+# إحداثيات بسكرة (المركز)
 HOME_LAT, HOME_LON = 34.85, 5.72
 
-if st.button('تحديث ومسح الأجواء'):
+if st.button('تحديث ومسح الأجواء الآن'):
     try:
         fr = FlightRadar24API()
-        # مسح نطاق 200 كلم حول بسكرة كما حددنا سابقاً
+        
+        # 2. مسح نطاق 200 كلم حول بسكرة
         bounds = fr.get_bounds_by_point(HOME_LAT, HOME_LON, 200000)
         flights = fr.get_flights(bounds = bounds)
         
         if flights:
-            st.success(f"✅ تم رصد {len(flights)} طائرة في النطاق المحلي")
-            
-            # --- ميزة التنبيهات الجديدة ---
+            # 3. نظام التنبيه الذكي (نطاق 30 كلم)
             near_flights = []
+            map_data = []
+            
             for f in flights:
-                # حساب المسافة التقريبية (فرق الإحداثيات البسيط)
+                # جلب البيانات بأمان لتجنب الـ AttributeError
+                callsign = getattr(f, 'callsign', 'N/A')
+                # محاولة جلب نوع الطائرة من عدة مسميات محتملة
+                aircraft = "N/A"
+                for attr in ['model', 'aircraft_code', 'typecode']:
+                    if hasattr(f, attr):
+                        aircraft = getattr(f, attr)
+                        break
+                
+                # إضافة البيانات للقائمة
+                map_data.append({
+                    'lat': f.latitude,
+                    'lon': f.longitude,
+                    'info': f"{callsign} | {aircraft}"
+                })
+                
+                # حساب المسافة للتنبيه (حساسية 0.3 درجة جغرافية)
                 dist = ((f.latitude - HOME_LAT)**2 + (f.longitude - HOME_LON)**2)**0.5
-                if dist < 0.1: # نطاق قريب جداً (حوالي 10-15 كلم من وسط بسكرة)
-                    near_flights.append(f)
+                if dist < 0.3:
+                    near_flights.append(callsign)
             
+            # عرض التنبيهات إذا وجدت طائرات قريبة
             if near_flights:
-                st.toast("⚠️ تنبيه: طائرة تقترب من موقعك الآن!", icon='✈️')
-                st.warning(f"🚨 يوجد {len(near_flights)} طائرة في سماء المدينة حالياً!")
-                # إضافة صوت تنبيه بسيط (اختياري عبر HTML)
-                st.components.v1.html("""<audio autoplay><source src="https://www.soundjay.com/buttons/beep-01a.mp3" type="audio/mpeg"></audio>""", height=0)
-            
-            # --- عرض الخريطة ---
-            map_data = [{'lat': f.latitude, 'lon': f.longitude, 'name': getattr(f, 'callsign', 'N/A')} for f in flights]
-            st.map(pd.DataFrame(map_data))
-            
-            # --- تفاصيل الرحلات ---
+                st.error(f"🚨 تنبيه: {len(near_flights)} طائرة في محيط مدينة بسكرة الآن!")
+                for nf in near_flights:
+                    st.toast(f"الطائرة {nf} تقترب!", icon='⚠️')
+
+            # 4. الخريطة الاحترافية (PyDeck) مع الأسماء فوق الطائرات
+            df_map = pd.DataFrame(map_data)
+            view_state = pdk.ViewState(latitude=HOME_LAT, longitude=HOME_LON, zoom=8, pitch=0)
+
+            # طبقة النقاط الحمراء
+            layer_points = pdk.Layer(
+                "ScatterplotLayer",
+                df_map,
+                get_position='[lon, lat]',
+                get_color='[255, 0, 0, 200]', # أحمر قوي
+                get_radius=2500,
+            )
+
+            # طبقة الأسماء البيضاء فوق النقاط
+            layer_text = pdk.Layer(
+                "TextLayer",
+                df_map,
+                get_position='[lon, lat]',
+                get_text='info',
+                get_size=18,
+                get_color=[255, 255, 255],
+                get_alignment_baseline="'bottom'",
+            )
+
+            st.pydeck_chart(pdk.Deck(
+                layers=[layer_points, layer_text],
+                initial_view_state=view_state,
+                map_style='mapbox://styles/mapbox/dark-v10'
+            ))
+
+            # 5. عرض التفاصيل في الأسفل
+            st.subheader("📋 قائمة الرحلات المرصودة:")
             for f in flights:
-                with st.expander(f"✈️ تفاصيل الرحلة: {getattr(f, 'callsign', 'N/A')}"):
-                    col1, col2 = st.columns(2)
-                    col1.metric("الارتفاع", f"{f.altitude} قدم")
-                    col2.metric("السرعة", f"{f.ground_speed} عقدة")
+                with st.expander(f"✈️ رحلة: {getattr(f, 'callsign', 'N/A')}"):
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("الارتفاع", f"{f.altitude} قدم")
+                    c2.metric("السرعة", f"{f.ground_speed} عقدة")
+                    c3.write(f"**الموقع:** {f.latitude:.2f}, {f.longitude:.2f}")
+
         else:
-            st.info("السماء صافية حالياً فوق بسكرة.")
+            st.warning("الأجواء هادئة حالياً فوق بسكرة والزيبان.")
+
     except Exception as e:
-        st.error(f"حدث خطأ: {e}")
+        st.error(f"تنبيه تقني: {e}")
