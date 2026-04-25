@@ -5,7 +5,7 @@ import google.generativeai as genai
 st.title("✈️ راداري الذكي")
 
 # إعداد المفتاح الذي استخدمته بنجاح سابقاً
-genai.configure(api_key="AIzaSyBMUU43qGG09zfsua9086oPPQ")
+genai.configure(api_key="AIzaSyBMUU43qGG09zfsua9O86oP1kOyy9Bv-PQ")
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 if st.button('ابحث عن طائرة وحللها'):
