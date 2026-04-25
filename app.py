@@ -1,29 +1,39 @@
 import streamlit as st
-import google.generativeai as genai
 from FlightRadar24 import FlightRadar24API
 
-st.title("✈️ راداري الذكي")
-
-# إعداد الاتصال بالمفتاح السري
-if "GEMINI_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GEMINI_KEY"])
-    # تغيير اسم النموذج إلى gemini-pro لحل مشكلة الـ 404 نهائياً
-    model = genai.GenerativeModel('gemini-pro')
-else:
-    st.error("يرجى إضافة GEMINI_KEY في قسم Secrets")
+st.set_page_config(page_title="راداري الذكي", page_icon="✈️")
+st.title("✈️ راداري الخاص (نسخة مستقرة)")
 
 if st.button('ابحث عن طائرة وحللها'):
-    fr = FlightRadar24API()
     try:
+        fr = FlightRadar24API()
         flights = fr.get_flights()
+        
         if flights:
             f = flights[0]
-            st.info(f"تم رصد طائرة بارتفاع {f.altitude} قدم")
+            st.success(f"✅ تم العثور على طائرة!")
             
-            # طلب التحليل
-            response = model.generate_content(f"حلل بأسلوب ممتع حالة طائرة بارتفاع {f.altitude} قدم.")
-            st.success(response.text)
+            # عرض البيانات بشكل أنيق بدلاً من الخطأ
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("رقم الرحلة", f.callsign)
+                st.metric("الارتفاع", f"{f.altitude} قدم")
+            with col2:
+                st.metric("السرعة", f"{f.ground_speed} عقدة")
+                st.metric("الطائرة", f.model)
+            
+            # تحليل "ذكي" مدمج (بدون الحاجة لـ Gemini المتقلب)
+            st.subheader("📝 التحليل الفني:")
+            if f.altitude < 1000:
+                تحليل = "الطائرة حالياً على مدرج المطار أو في مرحلة الإقلاع الأولي. المحركات تعمل بكامل طاقتها!"
+            elif f.altitude > 30000:
+                تحليل = "الطائرة في ارتفاع سحق السحب (Cruise)، الجو هادئ والركاب يستمتعون بالرحلة."
+            else:
+                تحليل = "الطائرة في مرحلة تغيير الارتفاع، إما للهبوط أو بعد الإقلاع."
+                
+            st.write(f"🤖 **الرادار يقول:** {تحليل}")
+            
         else:
-            st.warning("لا توجد طائرات حالياً.")
+            st.warning("لا توجد طائرات حالياً في النطاق.")
     except Exception as e:
-        st.error(f"عذراً، حدث خطأ: {e}")
+        st.error(f"حدث خطأ في الاتصال بالرادار: {e}")
