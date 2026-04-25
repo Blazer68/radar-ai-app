@@ -4,14 +4,14 @@ import google.generativeai as genai
 
 st.title("✈️ راداري الذكي الآمن")
 
-# استخدام طريقة الاتصال الأكثر استقراراً
+# الاتصال الآمن بالمفتاح
 try:
     if "GEMINI_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GEMINI_KEY"])
-        # حذفنا كلمة 'latest' و 'v1beta' لتجنب خطأ 404
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # الحل هنا: جربنا gemini-pro لأنه الأكثر استقراراً وقبولاً في كافة النسخ
+        model = genai.GenerativeModel('gemini-pro')
     else:
-        st.error("الرجاء إضافة GEMINI_KEY في إعدادات Secrets")
+        st.error("يرجى التأكد من إضافة GEMINI_KEY في إعدادات Secrets")
 except Exception as e:
     st.error(f"خطأ في الإعداد: {e}")
 
@@ -21,13 +21,14 @@ if st.button('تحليل الرحلة الحالية'):
         flights = fr.get_flights()
         if flights:
             f = flights[0]
-            # عرض الارتفاع الحالي (الذي وصل الآن لـ 801 قدم!)
+            # الارتفاع وصل الآن لـ 804 قدم كما في صورتك الأخيرة
             st.info(f"تم رصد طائرة بارتفاع {f.altitude} قدم")
             
-            # طلب التحليل بأسلوب بسيط
-            response = model.generate_content(f"حلل هذه البيانات بأسلوب مشوق: طائرة بارتفاع {f.altitude} قدم.")
+            # محاولة التحليل
+            response = model.generate_content(f"حلل بذكاء طائرة بارتفاع {f.altitude} قدم.")
             st.success(response.text)
         else:
-            st.warning("لا توجد طائرات حالياً.")
+            st.warning("لا توجد طائرات حالياً في الرادار.")
     except Exception as e:
-        st.error(f"عذراً، حدث خطأ أثناء جلب البيانات أو التحليل: {e}")
+        # إذا فشل gemini-pro، هذا الكود سيخبرنا بالسبب الدقيق خلف الستار
+        st.error(f"حدث خطأ تقني في التحليل: {e}")
