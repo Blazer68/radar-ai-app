@@ -1,3 +1,4 @@
 flightradarapi
 google-generativeai
-streamlit
+beautifulsoup4
+
