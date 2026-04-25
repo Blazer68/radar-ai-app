@@ -75,11 +75,21 @@ if st.button('تحديث ومسح الأجواء الآن'):
                 get_alignment_baseline="'bottom'",
             )
 
+                        # --- الخريطة الاحترافية مع إظهار تضاريس الأرض ---
             st.pydeck_chart(pdk.Deck(
-                layers=[layer_points, layer_text],
-                initial_view_state=view_state,
-                map_style='mapbox://styles/mapbox/dark-v10'
+                map_style='mapbox://styles/mapbox/light-v9', # تغيير النمط ليكون أكثر وضوحاً
+                initial_view_state=pdk.ViewState(
+                    latitude=HOME_LAT,
+                    longitude=HOME_LON,
+                    zoom=7, # تصغير الزووم قليلاً لرؤية مساحة أكبر من الجزائر
+                    pitch=0,
+                ),
+                layers=[
+                    layer_points,
+                    layer_text,
+                ],
             ))
+
 
             # 5. عرض التفاصيل في الأسفل
             st.subheader("📋 قائمة الرحلات المرصودة:")
