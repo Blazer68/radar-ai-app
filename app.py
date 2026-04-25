@@ -13,32 +13,42 @@ if st.button('ابحث عن طائرة وحللها'):
             f = flights[0]
             st.success("✅ تم العثور على طائرة!")
             
-            # استخدام الخصائص الأساسية المتوفرة دائماً
+            # عرض البيانات المتوفرة فقط وتجنب الأخطاء
             col1, col2 = st.columns(2)
             with col1:
-                # التأكد من وجود Callsign أو عرض 'غير معروف'
-                callsign = f.callsign if f.callsign else "N/A"
+                # التأكد من وجود رقم الرحلة
+                callsign = getattr(f, 'callsign', 'غير معروف')
                 st.metric("رقم الرحلة", callsign)
-                st.metric("الارتفاع", f"{f.altitude} قدم")
-            with col2:
-                st.metric("السرعة", f"{f.ground_speed} عقدة")
-                # هنا قمنا بإزالة .model التي كانت تسبب الخطأ واستبدالها بـ .aircraft_code
-                st.metric("رمز الطائرة", getattr(f, 'aircraft_code', 'غير معروف'))
-            
-            # تحليل مدمج ذكي وبسيط
-            st.subheader("📝 التحليل الفني:")
-            altitude = int(f.altitude)
-            if altitude < 1000:
-                تحليل = "الطائرة في وضعية منخفضة جداً، غالباً في مرحلة الإقلاع أو الهبوط النهائي."
-            elif altitude > 30000:
-                تحليل = "تحليق في الارتفاع القياسي للرحلات الطويلة. استقرار تام."
-            else:
-                تحليل = "تحليق في ارتفاع متوسط. الرحلة مستمرة كالمعتاد."
                 
-            st.write(f"🤖 **الرادار يقول:** {تحليل}")
+                # التأكد من وجود الارتفاع
+                altitude = getattr(f, 'altitude', 0)
+                st.metric("الارتفاع", f"{altitude} قدم")
+            
+            with col2:
+                # التأكد من وجود السرعة
+                speed = getattr(f, 'ground_speed', 0)
+                st.metric("السرعة", f"{speed} عقدة")
+                
+                # حل مشكلة الـ Attribute Error نهائياً
+                # سنحاول جلب أي معلومة عن نوع الطائرة، وإذا لم نجد سنكتب "غير متوفر"
+                aircraft = "غير متوفر"
+                for attr in ['model', 'aircraft_code', 'typecode']:
+                    if hasattr(f, attr):
+                        aircraft = getattr(f, attr)
+                        break
+                st.metric("نوع الطائرة", aircraft)
+            
+            # تحليل بسيط يعتمد على الارتفاع المتاح
+            st.subheader("📝 حالة الرحلة:")
+            if altitude < 1000:
+                msg = "الطائرة قريبة جداً من الأرض (إقلاع أو هبوط)."
+            elif altitude > 20000:
+                msg = "الطائرة في مرحلة التحليق العالي."
+            else:
+                msg = "الطائرة في مرحلة انتقالية أو تحليق منخفض."
+            st.write(f"🤖 **التحليل:** {msg}")
             
         else:
             st.warning("لا توجد طائرات حالياً في النطاق.")
     except Exception as e:
-        # هذا السطر سيطبع الخطأ إذا حدث لتعرف مكانه، ولكن الكود أعلاه سيتجنبه
-        st.error(f"تنبيه تقني: {e}")
+        st.error(f"حدث خطأ غير متوقع: {e}")
