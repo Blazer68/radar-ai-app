@@ -1,44 +1,39 @@
 import streamlit as st
 from FlightRadar24 import FlightRadar24API
+import pandas as pd
 
-st.set_page_config(page_title="راداري الذكي", page_icon="✈️")
-st.title("✈️ راداري الخاص (نسخة احترافية)")
+st.set_page_config(page_title="رادار بسكرة", page_icon="📍")
+st.title("📍 رادار الزيبان - بسكرة (200 كلم)")
 
-if st.button('ابحث عن طائرة وحللها'):
+if st.button('تحديث الرادار الآن'):
     try:
         fr = FlightRadar24API()
-        flights = fr.get_flights()
+        # إحداثيات بسكرة مع نطاق 200 كلم
+        bounds = fr.get_bounds_by_point(34.85, 5.72, 200000)
+        flights = fr.get_flights(bounds = bounds)
         
         if flights:
-            f = flights[0]
-            st.success("✅ تم العثور على طائرة!")
+            st.success(f"✅ تم رصد {len(flights)} طائرة حالياً")
             
-            # عرض البيانات بطريقة "آمنة" تتجنب الانهيار
-            col1, col2 = st.columns(2)
-            with col1:
-                # نستخدم .get() أو getattr() لتجنب الـ AttributeError
-                st.metric("رقم الرحلة", getattr(f, 'callsign', 'غير متوفر'))
-                st.metric("الارتفاع", f"{getattr(f, 'altitude', 0)} قدم")
+            # إعداد بيانات الخريطة
+            map_data = []
+            for f in flights:
+                map_data.append({
+                    'lat': f.latitude,
+                    'lon': f.longitude,
+                    'name': getattr(f, 'callsign', 'N/A')
+                })
             
-            with col2:
-                st.metric("السرعة", f"{getattr(f, 'ground_speed', 0)} عقدة")
-                # حل المشكلة التي في صورتك: نجرب عدة مسميات لنوع الطائرة
-                type_info = "غير متوفر"
-                for key in ['aircraft_code', 'model', 'typecode']:
-                    if hasattr(f, key):
-                        type_info = getattr(f, key)
-                        break
-                st.metric("نوع الطائرة", type_info)
+            # رسم الخريطة
+            df = pd.DataFrame(map_data)
+            st.map(df)
             
-            # تحليل تلقائي ذكي
-            st.subheader("📝 حالة الطائرة:")
-            alt = getattr(f, 'altitude', 0)
-            if alt < 1000:
-                st.write("🤖 **التحليل:** الطائرة قريبة جداً من الأرض، من المحتمل أنها في طور الإقلاع أو الهبوط.")
-            else:
-                st.write("🤖 **التحليل:** الطائرة تحلق في الأجواء بشكل مستقر.")
-                
+            # عرض التفاصيل أسفل الخريطة
+            for f in flights:
+                with st.expander(f"✈️ {getattr(f, 'callsign', 'N/A')}"):
+                    st.write(f"**الارتفاع:** {f.altitude} قدم")
+                    st.write(f"**السرعة:** {f.ground_speed} عقدة")
         else:
-            st.warning("لا توجد طائرات حالياً في النطاق.")
+            st.warning("الأجواء هادئة فوق بسكرة حالياً.")
     except Exception as e:
-        st.error(f"تنبيه تقني: {e}")
+        st.error(f"تنبيه: {e}")
