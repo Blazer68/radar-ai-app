@@ -1,38 +1,44 @@
 import streamlit as st
 from FlightRadar24 import FlightRadar24API
 
-st.set_page_config(page_title="رادار بسكرة المحلي", page_icon="📍", layout="wide")
-st.title("📍 رادار بسكرة والأجواء المجاورة (200 كلم)")
+st.set_page_config(page_title="راداري الذكي", page_icon="✈️")
+st.title("✈️ راداري الخاص (نسخة احترافية)")
 
-if st.button('تحديث حركة طيران بسكرة'):
+if st.button('ابحث عن طائرة وحللها'):
     try:
         fr = FlightRadar24API()
-        
-        # تحديد منطقة بسكرة بقطر تقريبي 200 كلم
-        # الإحداثيات: شمال، جنوب، غرب، شرق
-        bounds = fr.get_bounds_by_point(34.85, 5.72, 200000) # 200,000 متر = 200 كلم
-        flights = fr.get_flights(bounds = bounds)
+        flights = fr.get_flights()
         
         if flights:
-            st.success(f"✅ تم رصد {len(flights)} طائرة فوق منطقة بسكرة حالياً")
+            f = flights[0]
+            st.success("✅ تم العثور على طائرة!")
             
-            for f in flights:
-                with st.expander(f"✈️ رحلة: {getattr(f, 'callsign', 'N/A')}"):
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        st.metric("الارتفاع", f"{f.altitude} قدم")
-                    with c2:
-                        st.metric("السرعة", f"{f.ground_speed} عقدة")
-                    with c3:
-                        # عرض الوجهة إذا توفرت
-                        st.write(f"**من:** {getattr(f, 'origin_airport_iota', 'غير معروف')}")
-                        st.write(f"**إلى:** {getattr(f, 'destination_airport_iota', 'غير معروف')}")
-                    
-                    # تنبيه إذا كانت الطائرة قريبة جداً من الأرض (احتمال مطار بسكرة)
-                    if int(f.altitude) < 5000:
-                        st.warning("⚠️ هذه الطائرة في ارتفاع منخفض، قد تكون متجهة لمطار محمد خيضر أو أقلعت منه!")
+            # عرض البيانات بطريقة "آمنة" تتجنب الانهيار
+            col1, col2 = st.columns(2)
+            with col1:
+                # نستخدم .get() أو getattr() لتجنب الـ AttributeError
+                st.metric("رقم الرحلة", getattr(f, 'callsign', 'غير متوفر'))
+                st.metric("الارتفاع", f"{getattr(f, 'altitude', 0)} قدم")
+            
+            with col2:
+                st.metric("السرعة", f"{getattr(f, 'ground_speed', 0)} عقدة")
+                # حل المشكلة التي في صورتك: نجرب عدة مسميات لنوع الطائرة
+                type_info = "غير متوفر"
+                for key in ['aircraft_code', 'model', 'typecode']:
+                    if hasattr(f, key):
+                        type_info = getattr(f, key)
+                        break
+                st.metric("نوع الطائرة", type_info)
+            
+            # تحليل تلقائي ذكي
+            st.subheader("📝 حالة الطائرة:")
+            alt = getattr(f, 'altitude', 0)
+            if alt < 1000:
+                st.write("🤖 **التحليل:** الطائرة قريبة جداً من الأرض، من المحتمل أنها في طور الإقلاع أو الهبوط.")
+            else:
+                st.write("🤖 **التحليل:** الطائرة تحلق في الأجواء بشكل مستقر.")
+                
         else:
-            st.warning("لا توجد طائرات حالياً في نطاق 200 كلم حول بسكرة.")
-            
+            st.warning("لا توجد طائرات حالياً في النطاق.")
     except Exception as e:
-        st.error(f"خطأ تقني: {e}")
+        st.error(f"تنبيه تقني: {e}")
