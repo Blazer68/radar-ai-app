@@ -1,5 +1,4 @@
 flightradarapi
 pandas
-pydeck
-google-generativeai
-beautifulsoup4
+folium
+streamlit-folium
