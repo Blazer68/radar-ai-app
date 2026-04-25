@@ -1,4 +1,4 @@
-flightradarapi
+Flightradarapi
 pandas
 pydeck
 google-generativeai
