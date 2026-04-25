@@ -1,4 +1,6 @@
 flightradarapi
+pandas
+flightradarapi
 google-generativeai
 beautifulsoup4
 
