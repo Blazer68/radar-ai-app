@@ -2,7 +2,7 @@ import streamlit as st
 from FlightRadar24 import FlightRadar24API
 
 st.set_page_config(page_title="راداري الذكي", page_icon="✈️")
-st.title("✈️ راداري الخاص (نسخة مستقرة)")
+st.title("✈️ راداري الخاص (النسخة المستقرة)")
 
 if st.button('ابحث عن طائرة وحللها'):
     try:
@@ -11,29 +11,34 @@ if st.button('ابحث عن طائرة وحللها'):
         
         if flights:
             f = flights[0]
-            st.success(f"✅ تم العثور على طائرة!")
+            st.success("✅ تم العثور على طائرة!")
             
-            # عرض البيانات بشكل أنيق بدلاً من الخطأ
+            # استخدام الخصائص الأساسية المتوفرة دائماً
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("رقم الرحلة", f.callsign)
+                # التأكد من وجود Callsign أو عرض 'غير معروف'
+                callsign = f.callsign if f.callsign else "N/A"
+                st.metric("رقم الرحلة", callsign)
                 st.metric("الارتفاع", f"{f.altitude} قدم")
             with col2:
                 st.metric("السرعة", f"{f.ground_speed} عقدة")
-                st.metric("الطائرة", f.model)
+                # هنا قمنا بإزالة .model التي كانت تسبب الخطأ واستبدالها بـ .aircraft_code
+                st.metric("رمز الطائرة", getattr(f, 'aircraft_code', 'غير معروف'))
             
-            # تحليل "ذكي" مدمج (بدون الحاجة لـ Gemini المتقلب)
+            # تحليل مدمج ذكي وبسيط
             st.subheader("📝 التحليل الفني:")
-            if f.altitude < 1000:
-                تحليل = "الطائرة حالياً على مدرج المطار أو في مرحلة الإقلاع الأولي. المحركات تعمل بكامل طاقتها!"
-            elif f.altitude > 30000:
-                تحليل = "الطائرة في ارتفاع سحق السحب (Cruise)، الجو هادئ والركاب يستمتعون بالرحلة."
+            altitude = int(f.altitude)
+            if altitude < 1000:
+                تحليل = "الطائرة في وضعية منخفضة جداً، غالباً في مرحلة الإقلاع أو الهبوط النهائي."
+            elif altitude > 30000:
+                تحليل = "تحليق في الارتفاع القياسي للرحلات الطويلة. استقرار تام."
             else:
-                تحليل = "الطائرة في مرحلة تغيير الارتفاع، إما للهبوط أو بعد الإقلاع."
+                تحليل = "تحليق في ارتفاع متوسط. الرحلة مستمرة كالمعتاد."
                 
             st.write(f"🤖 **الرادار يقول:** {تحليل}")
             
         else:
             st.warning("لا توجد طائرات حالياً في النطاق.")
     except Exception as e:
-        st.error(f"حدث خطأ في الاتصال بالرادار: {e}")
+        # هذا السطر سيطبع الخطأ إذا حدث لتعرف مكانه، ولكن الكود أعلاه سيتجنبه
+        st.error(f"تنبيه تقني: {e}")
