@@ -2,3 +2,5 @@ flightradarapi
 pandas
 folium
 streamlit-folium
+beautifulsoup4
+google-generativeai
